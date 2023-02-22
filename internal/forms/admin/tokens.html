@@ -1,0 +1,175 @@
+{% include 'uit-header.html' %}
+
+
+    <div id="vntbot">
+        <ui-help document="BotTokensManage" v-bind:actlang="activeLanguage"></ui-help>
+        <el-form ref="form" :model="manageform" label-width="120px">
+
+            <el-form-item label="Request subject">
+                <el-input type="text" placeholder="subject" v-model="manageform.subject"></el-input>
+            </el-form-item>
+            <el-form-item label="Comment">
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="for approver or performer"
+                    v-model="manageform.comment">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="Request Operation">
+                <el-radio-group v-model="manageform.operation">
+
+                    <el-radio label="movetokens">Move tokens from one user to other user</el-radio>
+                    <el-radio label="addtokens">Add new tokens to the user (tokens emission)</el-radio>
+                    <el-radio label="removetokens">Destroy tokens from the user (tokens destruction)</el-radio>
+                    <el-radio label="addpercenttokens">Add tokens by percentage to all users (tokens emission)</el-radio>
+                    <el-radio label="removepercenttokens">Destroy tokens by percentage from all users (tokens destruction)</el-radio>
+                    <el-radio label="tokenreports">Report total number of tokens and VNT members distribution</el-radio>
+
+                </el-radio-group>
+            </el-form-item>
+
+            <span>
+                This bot is not implemented yet, I am working to launch it soon.
+            </span>
+
+            <span v-if="manageform.operation == 'movetokens'">
+                <el-form-item label="From user">
+                    <el-select v-model="manageform.fromuser" placeholder="Select">
+                        <el-option
+                            v-for="item in userList"
+                            :key="item.uservntid"
+                            :label="item.nickname"
+                            :value="[item.nickname, item.uservntid]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="To user">
+                    <el-select v-model="manageform.touser" placeholder="Select">
+                        <el-option
+                            v-for="item in userList"
+                            :key="item.uservntid"
+                            :label="item.nickname"
+                            :value="[item.nickname, item.uservntid]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="Number of tokens">
+                    <el-input type="number" placeholder="number of tokens" v-model="manageform.tokens"></el-input>
+                </el-form-item>
+            </span>
+
+        </el-form>
+    </div>
+
+    <script type="text/javascript">
+        //var vntbot = new Vue({
+        const { createApp } = Vue;
+        const vntbot = createApp({
+            //el: '#vntbot',
+            name: "vntbottokens",
+            components: {
+                "ui-help": uiHelp,
+            },
+            data() {
+                return {
+                subject: '',
+                vntid: 0,
+                uservntid: 0,
+                jwt: '',
+                activeLanguage: 'eng',
+                svcid: null,
+                manageform: {
+                    vntid: null,
+                    uservntid: null,
+                    operation: null,
+                    tokens: 0,
+                    action: "Request",
+                    nickname: '',
+                    newnickname: '',
+                    fromuser: '',
+                    touser: '',
+                    groupname: '',
+                    dst_svcid: null,
+                    comment: '',
+                    subject: '',
+                    serviceid: [],
+                    groupid: null
+                },
+                groupList: [],
+                UserGroupList: [],
+                userList: [],
+                serviceList: [],
+                presvcList: [],
+                groupForAct: [],
+                usrsvcList: [],
+                groupForChange: [],
+                groupForRemove: []
+                }
+            }
+        });
+        vntbot.use(ElementPlus);
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            vntbot.component(key, component);
+        }
+        vntbot.use(VueShowdownPlugin, {
+            flavor: "original",
+            options: {
+              emoji: true,
+            },
+          });
+        const botapp = vntbot.mount('#vntbot');
+        window.receiveDataFromParent = function(parentData) {
+            botapp.vntid = parentData.vntid;
+            botapp.uservntid = parentData.uservntid;
+            botapp.jwt = parentData.jwt;
+            botapp.svcid = parentData.svcid;
+            botapp.activeLanguage = parentData.activelanguage;
+            console.info("parentData=", parentData);
+            // now read list of groups
+            axios
+                .get(`/api/allgroups?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.groupList = response.data.items));
+            axios
+                .get(`/api/allusers?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.userList = response.data.items));
+            axios
+                .get(`/api/get/services?vntid=`+botapp.vntid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.serviceList = response.data.items));
+            axios
+                .get(`/api/get/preservices?vntid=`+botapp.vntid+'&svcid='+botapp.svcid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.presvcList = response.data.items));
+            axios
+                .get(`/api/get/fullpath?vntid=`+botapp.vntid+'&svcid='+botapp.svcid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.usrsvcList = response.data.items));
+        };
+        window.needToSubmitResults = function() {
+            console.log("call for needToSubmitResults");
+            botapp.manageform.vntid = botapp.vntid;
+            botapp.manageform.uservntid = botapp.uservntid;
+            botapp.manageform.dst_svcid = botapp.svcid;
+            botapp.manageform.formbody_json = [
+                {'name': 'user nickname', 'value': botapp.manageform.newnickname },
+                {'name': 'groupname', 'value': botapp.groupForAct[0] },
+                {'name': 'groupid', 'value': botapp.groupForAct[1] },
+                {'name': 'user old nickname', 'value': botapp.manageform.user[0] },
+                {'name': 'user old uservntid', 'value': botapp.manageform.user[1] },
+                {'name': 'serviceid', 'value': botapp.manageform.serviceid[0] },
+                {'name': 'service name', 'value': botapp.manageform.serviceid[1] },
+                {'name': 'user old groupname', 'value': botapp.groupForRemove[0]},
+                {'name': 'user old groupid', 'value': botapp.groupForRemove[1]},
+                {'name': 'user new groupname', 'value': botapp.groupForChange[0]},
+                {'name': 'user new groupid', 'value': botapp.groupForChange[1]}
+            ];
+            axios.post(`/api/post/newmessage`, botapp.manageform, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+            .then(function (response) {
+                console.log(response);
+                //rereadvnt();
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+        }
+    </script>
+    
+{% include 'uit-footer.html' %}

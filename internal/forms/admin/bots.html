@@ -1,0 +1,193 @@
+{% include 'uit-header.html' %}
+
+
+        <div id="vntbot" v-cloak>
+            <ui-help document="BotBotsManage" v-bind:actlang="activeLanguage"></ui-help>
+            <el-form ref="form" :model="managebotform" label-width="120px">
+                <!--el-form-item label="Service path">
+                    <span
+                        v-for="item in presvcList"
+                        :key="item.index">
+                            [{{item.svcdescr}}]
+                    </span>
+                </el-form-item>
+                <el-form-item label="User/bot path">
+                    <span
+                            v-for="item in usrsvcList.slice().reverse()"
+                            :key="item.index">
+                                [{{item.nickname}}/{{item.isbot}}]
+                    </span>
+                </el-form-item-->
+                <el-form-item label="Request subject">
+                    <el-input type="text" placeholder="subject" v-model="managebotform.subject"></el-input>
+                </el-form-item>
+                <el-form-item label="Comment">
+                    <el-input
+                        type="textarea"
+                        :rows="2"
+                        placeholder="for approver or performer"
+                        v-model="managebotform.comment">
+                    </el-input>
+                </el-form-item>
+                <el-form-item label="Request Operation">
+                    <el-radio-group v-model="managebotform.operation">
+                        <el-radio label="add">Add (need to enter nickname and select available bot and group)</el-radio>
+                        <el-radio label="del">Delete (need to select active bot nickname)</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+
+                <span v-if="managebotform.operation == 'add'">
+                    <el-form-item label="Available bots">
+                        <el-select v-model="managebotform.fromallbots" placeholder="Select">
+                            <el-option
+                                v-for="item in allbotList"
+                                :key="item.botid"
+                                :label="item.botname+'-'+item.botdescr"
+                                :value="item.botid">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="Nickname">
+                        <el-input type="text" placeholder="nickname" v-model="managebotform.nickname"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Existed group">
+                        <el-select v-model="managebotform.groupid" placeholder="Select">
+                            <el-option
+                                v-for="item in groupList"
+                                :key="item.groupid"
+                                :label="item.groupname"
+                                :value="item.groupid">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                </span>
+
+                <span v-if="managebotform.operation == 'del'">
+                    <el-form-item label="Active bots">
+                        <el-select v-model="managebotform.botidfordel" placeholder="Select">
+                            <el-option
+                                    v-for="item in allbotnickList"
+                                    :key="item.uservntid"
+                                    :label="item.nickname+'-'+item.botname+'-'+item.botdescr"
+                                    :value="item.uservntid">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                </span>
+
+            </el-form>
+        </div>
+        <script type="text/javascript">
+            const { createApp } = Vue;
+            const vntbot = createApp({
+            //var vntbot = new Vue({
+                //el: '#vntbot',
+                name: "vntbotbots",
+                components: {
+                    "ui-help": uiHelp,
+                },
+                data() {
+                    return {
+                        vntid: 0,
+                        uservntid: 0,
+                        svcid: null,
+                        jwt: '',
+                        activeLanguage: 'eng',
+                        managebotform: {
+                            vntid: 0,
+                            uservntid: 0,
+                            subject: '',
+                            comment: '',
+                            action: 'Request',
+                            dst_svcid: null,
+                            dstid: null,
+                            operation: null,
+                            storage: '',
+                            formid: null,
+                            var1val: '',
+                            var2val: '',
+                            var3val: '',
+                            var4val: '',
+                            var5val: '',
+                            var6val: '',
+                            var7val: '',
+                            var8val: '',
+                            var9val: '',
+                            nickname: '',
+                            groupname: '',
+                            fromallbots: null,
+                            botidfordel: null,
+                            groupid: null,
+                            dstid: 0,
+                            nextpresvcid: 0,
+                            reason: '',
+                            storage: ''
+                        },
+                        groupList: [],
+                        allbotList: [],
+                        allbotnickList: [],
+                        presvcList: [],
+                        usrsvcList: []
+                    }
+                }
+            });
+            vntbot.use(ElementPlus);
+            for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+                vntbot.component(key, component);
+            }
+            vntbot.use(VueShowdownPlugin, {
+                flavor: "original",
+                options: {
+                  emoji: true,
+                },
+            });
+            const botapp = vntbot.mount('#vntbot');
+            window.receiveDataFromParent = function(parentData) {
+                botapp.vntid = parentData.vntid;
+                botapp.uservntid = parentData.uservntid;
+                botapp.jwt = parentData.jwt;
+                botapp.svcid = parentData.svcid;
+                botapp.activeLanguage = parentData.activelanguage;
+                //vntbot.groupList = parentData.groupList;
+        
+                //console.info("parentData=",parentData);
+                // TODO!!! - replace these 5 API calls with one!!!!
+                axios
+                    .get(`/api/allgroups?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.groupList = response.data.items));
+                axios
+                    .get(`/api/get/allbots?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.allbotList = response.data.items));
+                axios
+                    .get(`/api/get/vntbots?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.allbotnickList = response.data.items));
+                axios
+                    .get(`/api/get/preservices?vntid=`+botapp.vntid+'&svcid='+botapp.svcid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.presvcList = response.data.items));
+                axios
+                    .get(`/api/get/fullpath?vntid=`+botapp.vntid+'&svcid='+botapp.svcid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.usrsvcList = response.data.items));
+            };
+            window.needToSubmitResults = function() {
+                console.log("call for needToSubmitResults");
+                botapp.managebotform.vntid = botapp.vntid;
+                botapp.managebotform.uservntid = botapp.uservntid;
+                botapp.managebotform.dst_svcid = botapp.svcid;
+                botapp.managebotform.formbody_json = [
+                    { 'name': 'nickname', 'value': botapp.managebotform.nickname },
+                    { 'name': 'fromallbots', 'value': botapp.managebotform.fromallbots },
+                    { 'name': 'botidfordel', 'value': botapp.managebotform.botidfordel },
+                    { 'name': 'groupid', 'value': botapp.managebotform.groupid }
+                ];
+                axios.post(`/api/post/newmessage`, botapp.managebotform, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(function (response) {
+                    console.log(response);
+                    //rereadvnt();
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            }
+        </script>
+
+{% include 'uit-footer.html' %}

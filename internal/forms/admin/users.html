@@ -1,0 +1,240 @@
+{% include 'uit-header.html' %}
+
+
+    <div id="vntbot">
+        <ui-help document="BotUsersManage" v-bind:actlang="activeLanguage"></ui-help>
+        <el-form ref="form" :model="manageform" label-width="120px">
+            <!--el-form-item label="Service path">
+                <span
+                    v-for="item in presvcList"
+                    :key="item.index">
+                        [{{item.svcdescr}}]
+            </span>
+            </el-form-item>
+            <el-form-item label="User/bot path">
+                <span
+                        v-for="item in usrsvcList.slice().reverse()"
+                        :key="item.index">
+                            [{{item.nickname}}/{{item.isbot}}]
+                </span>
+            </el-form-item-->
+            <el-form-item label="Request subject">
+                <el-input type="text" placeholder="subject" v-model="manageform.subject"></el-input>
+            </el-form-item>
+            <el-form-item label="Comment">
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="for approver or performer"
+                    v-model="manageform.comment">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="Request Operation">
+                <el-radio-group v-model="manageform.operation">
+                    <el-radio label="createnewuser">Invite new user and connect to a group (enter Nickname and select Group)</el-radio>
+                    <el-radio label="changeusergroup">Change user group (select Username, select Old Group, select New Group)</el-radio>
+                    <el-radio label="addusertogroup">Add existed user to group (select Username, select Group)</el-radio>
+                    <el-radio label="deluserfromgroup">Remove existed user from group (select Username, select Group)</el-radio>
+                    <el-radio label="changenickname">Change user nickname (select Nickname, set new Nickname)</el-radio>
+                    <el-radio label="addtoservice">Add existed User to existed Service (select Username, select Service)</el-radio>
+                    <el-radio label="removefromservice">Remove Service from User (select Username, select Service)</el-radio>
+                    <el-radio label="deleteuser">Delete user from VNT (select Username)</el-radio>
+                    <el-radio label="destroyuser">Destroy user - delete nicknames from all VNTs and delete account (select Username)</el-radio>
+                </el-radio-group>
+            </el-form-item>
+
+            <span v-if="manageform.operation == 'createnewuser'">
+                you will receive registration code for new user and need to securely
+                share this registration code with your new user.
+            </span>
+            <span v-if="manageform.operation == 'destroyuser'">
+                This feature is operational. Used for testing/development, later should be replaced with flag instead
+                of real destroy.
+            </span>
+
+            <span v-if="manageform.operation == 'createnewuser' || manageform.operation == 'changenickname'">
+                <el-form-item label="New nickname">
+                    <el-input type="text" placeholder="nickname" v-model="manageform.newnickname"></el-input>
+                </el-form-item>
+            </span>
+
+            <!--span v-if="manageform.operation == 'createnewuser'">
+                <el-form-item label="Limit by email">
+                    <el-input type="text" placeholder="if entered, allow register new account only with this email" v-model="manageform.email"></el-input>
+                </el-form-item>
+            </span-->
+
+            <span v-if="manageform.operation != 'createnewuser' && manageform.operation != null">
+                <el-form-item label="Existed user">
+                    <el-select v-model="manageform.user" placeholder="Select">
+                        <el-option
+                            v-for="item in userList"
+                            :key="item.uservntid"
+                            :label="item.nickname"
+                            :value="[item.nickname, item.uservntid]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+
+            <span v-if="manageform.operation == 'createnewuser' || manageform.operation == 'addusertogroup' || manageform.operation == 'deluserfromgroup'">
+                <el-form-item label="Existed group">
+                    <el-select v-model="groupForAct" placeholder="Select">
+                        <el-option
+                            v-for="item in groupList"
+                            :key="item.groupid"
+                            :label="item.groupname"
+                            :value="[item.groupname,item.groupid]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+
+            <span v-if="manageform.operation == 'changeusergroup'">
+                <el-form-item label="Old Group">
+                    <el-select v-model="groupForRemove" placeholder="Select">
+                        <el-option
+                            v-for="item in groupList"
+                            :key="item.groupid"
+                            :label="item.groupname"
+                            :value="[item.groupname,item.groupid]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="New Group">
+                    <el-select v-model="groupForChange" placeholder="Select">
+                        <el-option
+                            v-for="item in groupList"
+                            :key="item.groupid"
+                            :label="item.groupname"
+                            :value="[item.groupname,item.groupid]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+            
+            <span v-if="manageform.operation == 'addtoservice' || manageform.operation == 'removefromservice'">
+                <el-form-item label="Service code">
+                    <el-select v-model="manageform.serviceid" placeholder="Select">
+                        <el-option
+                            v-for="item in serviceList"
+                            :key="item.svcid"
+                            :label="item.level1+'.'+item.level2+'.'+item.level3+'.'+item.level4"
+                            :value="[item.svcid, item.level1+'.'+item.level2+'.'+item.level3+'.'+item.level4]">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+
+        </el-form>
+    </div>
+
+    <script type="text/javascript">
+        //var vntbot = new Vue({
+        const { createApp } = Vue;
+        const vntbot = createApp({
+            name: "vntbotusers",
+            components: {
+                "ui-help": uiHelp,
+            },
+            //el: '#vntbot',
+            data() {
+                return {
+                subject: '',
+                vntid: 0,
+                uservntid: 0,
+                jwt: '',
+                activeLanguage: 'eng',
+                svcid: null,
+                manageform: {
+                    vntid: null,
+                    uservntid: null,
+                    operation: null,
+                    action: "Request",
+                    nickname: '',
+                    newnickname: '',
+                    user: [],
+                    groupname: '',
+                    dst_svcid: null,
+                    comment: '',
+                    subject: '',
+                    serviceid: [],
+                    groupid: null
+                },
+                groupList: [],
+                UserGroupList: [],
+                userList: [],
+                serviceList: [],
+                presvcList: [],
+                groupForAct: [],
+                usrsvcList: [],
+                groupForChange: [],
+                groupForRemove: []
+                }
+            }
+        });
+        vntbot.use(ElementPlus);
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            vntbot.component(key, component);
+        }
+        vntbot.use(VueShowdownPlugin, {
+            flavor: "original",
+            options: {
+              emoji: true,
+            },
+          });
+        const botapp = vntbot.mount('#vntbot');
+        window.receiveDataFromParent = function(parentData) {
+            botapp.vntid = parentData.vntid;
+            botapp.uservntid = parentData.uservntid;
+            botapp.jwt = parentData.jwt;
+            botapp.svcid = parentData.svcid;
+            botapp.activeLanguage = parentData.activelanguage;
+            console.info("parentData=", parentData);
+            // now read list of groups
+            axios
+                .get(`/api/allgroups?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.groupList = response.data.items));
+            axios
+                .get(`/api/allusers?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.userList = response.data.items));
+            axios
+                .get(`/api/get/services?vntid=`+botapp.vntid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.serviceList = response.data.items));
+            axios
+                .get(`/api/get/preservices?vntid=`+botapp.vntid+'&svcid='+botapp.svcid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.presvcList = response.data.items));
+            axios
+                .get(`/api/get/fullpath?vntid=`+botapp.vntid+'&svcid='+botapp.svcid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.usrsvcList = response.data.items));
+        };
+        window.needToSubmitResults = function() {
+            console.log("call for needToSubmitResults");
+            botapp.manageform.vntid = botapp.vntid;
+            botapp.manageform.uservntid = botapp.uservntid;
+            botapp.manageform.dst_svcid = botapp.svcid;
+            botapp.manageform.formbody_json = [
+                {'name': 'user nickname', 'value': botapp.manageform.newnickname },
+                {'name': 'groupname', 'value': botapp.groupForAct[0] },
+                {'name': 'groupid', 'value': botapp.groupForAct[1] },
+                {'name': 'user old nickname', 'value': botapp.manageform.user[0] },
+                {'name': 'user old uservntid', 'value': botapp.manageform.user[1] },
+                {'name': 'serviceid', 'value': botapp.manageform.serviceid[0] },
+                {'name': 'service name', 'value': botapp.manageform.serviceid[1] },
+                {'name': 'user old groupname', 'value': botapp.groupForRemove[0]},
+                {'name': 'user old groupid', 'value': botapp.groupForRemove[1]},
+                {'name': 'user new groupname', 'value': botapp.groupForChange[0]},
+                {'name': 'user new groupid', 'value': botapp.groupForChange[1]}
+            ];
+            axios.post(`/api/post/newmessage`, botapp.manageform, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+            .then(function (response) {
+                console.log(response);
+                //rereadvnt();
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+        }
+    </script>
+
+{% include 'uit-footer.html' %}

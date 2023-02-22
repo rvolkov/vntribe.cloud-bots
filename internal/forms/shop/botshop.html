@@ -1,0 +1,82 @@
+{% include 'uit-header.html' %}
+
+
+<div id="vntbot">
+            ToDo: show here shop of bots where user can order to add bot to a system (and with ability to attach
+            this bot via bots management bot). As result request to purchase bot subscription should be generated and
+            after all the approves we can charge VNT owner account for purchase. Surely it should be a lot of free bots. 
+            For example we plan to start from the next bots:
+            <ul>
+                <li>all-approver bot - install as a node to connect groups but without real request review</li>
+                <li>RestBox bot - bot in VNT plus hardware device with LED and button connector - you can let somebody
+                    to accept task and report about finished task just by press button. Other use - ask about distance on
+                    RestBox installed ultrasonic sensor or photo from camera to address your request with
+                    real-world services.
+                </li>
+                <li>...more ideas coming...</li>
+            </ul>
+            This page should looks like book shop with bots descriptions and examples, user selects bot and press "Activate"
+            or "Buy" buttons. Some bots can have one-time payment and some - subscription. I think also to develop
+            API for 3rd party bots and let VNTSpaces partners develop and sell own bots via this BotShop.
+        </div>
+        <script type="text/javascript">
+            const { createApp } = Vue;
+            const vntbot = createApp({
+            //var vntbot = new Vue({
+                //el: '#vntbot',
+                data() {
+                    return {
+                    vntid: 0,
+                    uservntid: 0,
+                    svcid: null,
+                    jwt: '',
+                    }
+                }
+            });
+            vntbot.use(ElementPlus);
+            const botapp = vntbot.mount('#vntbot');
+            window.receiveDataFromParent = function(parentData) {
+                botapp.vntid = parentData.vntid;
+                botapp.uservntid = parentData.uservntid;
+                botapp.jwt = parentData.jwt;
+                botapp.svcid = parentData.svcid;
+                console.info("parentData=", parentData);
+                axios
+                    .get(`/api/allgroups?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.groupList = response.data.items));
+                axios
+                    .get(`/api/get/allbots?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.allbotList = response.data.items));
+                axios
+                    .get(`/api/get/vntbots?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.allbotnickList = response.data.items));
+                axios
+                    .get(`/api/get/preservices?vntid=`+botapp.vntid+'&svcid='+botapp.svcid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.presvcList = response.data.items));
+                axios
+                    .get(`/api/get/fullpath?vntid=`+botapp.vntid+'&svcid='+botapp.svcid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.usrsvcList = response.data.items));
+            };
+            window.needToSubmitResults = function() {
+                console.log("call for needToSubmitResults");
+                botapp.managebotform.vntid = botapp.vntid;
+                botapp.managebotform.uservntid = botapp.uservntid;
+                botapp.managebotform.dst_svcid = botapp.svcid;
+                botapp.managebotform.formbody_json = [
+                    { 'name': 'nickname', 'value': botapp.managebotform.nickname },
+                    { 'name': 'fromallbots', 'value': botapp.managebotform.fromallbots },
+                    { 'name': 'botidfordel', 'value': botapp.managebotform.botidfordel },
+                    { 'name': 'groupid', 'value': botapp.managebotform.groupid }
+                ];
+                axios.post(`/api/post/newmessage`, botapp.managebotform, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(function (response) {
+                    console.log(response);
+                    //rereadvnt();
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            }
+        </script> 
+            
+{% include 'uit-footer.html' %}

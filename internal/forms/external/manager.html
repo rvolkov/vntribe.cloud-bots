@@ -1,0 +1,76 @@
+{% include 'uit-header.html' %}
+
+
+        <div id="vntbot">
+            <p>
+                ToDo: This form is for External Services Manager bot: form should allow make connection
+                with other VNT, on the other side this connection should be approved.
+                Here also need to configure inter-VNT filters to allow list of internal services to be shared
+                with external VNT, plus other filter for incoming list of services from other VNT.
+            </p>
+            <p>
+                I suppose to keep all the external services under "external" sub-directory in Services directory.
+            </p>
+        </div>
+            
+        <script type="text/javascript">
+            const { createApp } = Vue;
+            const vntbot = createApp({
+            //var vntbot = new Vue({
+                //el: '#vntbot',
+                data() {
+                    return {
+                    vntid: 0,
+                    uservntid: 0,
+                    svcid: null,
+                    jwt: '',
+                    }
+                }
+            });
+            vntbot.use(ElementPlus);
+            const botapp = vntbot.mount('#vntbot');
+            window.receiveDataFromParent = function(parentData) {
+                botapp.vntid = parentData.vntid;
+                botapp.uservntid = parentData.uservntid;
+                botapp.jwt = parentData.jwt;
+                botapp.svcid = parentData.svcid;
+                console.info("parentData=", parentData);
+                axios
+                    .get(`/api/allgroups?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.groupList = response.data.items));
+                axios
+                    .get(`/api/get/allbots?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.allbotList = response.data.items));
+                axios
+                    .get(`/api/get/vntbots?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.allbotnickList = response.data.items));
+                axios
+                    .get(`/api/get/preservices?vntid=`+botapp.vntid+'&svcid='+botapp.svcid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.presvcList = response.data.items));
+                axios
+                    .get(`/api/get/fullpath?vntid=`+botapp.vntid+'&svcid='+botapp.svcid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                    .then(response => (botapp.usrsvcList = response.data.items));
+            };
+            window.needToSubmitResults = function() {
+                console.log("call for needToSubmitResults");
+                botapp.managebotform.vntid = botapp.vntid;
+                botapp.managebotform.uservntid = botapp.uservntid;
+                botapp.managebotform.dst_svcid = botapp.svcid;
+                botapp.managebotform.formbody_json = [
+                    { 'name': 'nickname', 'value': botapp.managebotform.nickname },
+                    { 'name': 'fromallbots', 'value': botapp.managebotform.fromallbots },
+                    { 'name': 'botidfordel', 'value': botapp.managebotform.botidfordel },
+                    { 'name': 'groupid', 'value': botapp.managebotform.groupid }
+                ];
+                axios.post(`/api/post/newmessage`, botapp.managebotform, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(function (response) {
+                    console.log(response);
+                    //rereadvnt();
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            }
+</script> 
+
+{% include 'uit-footer.html' %}

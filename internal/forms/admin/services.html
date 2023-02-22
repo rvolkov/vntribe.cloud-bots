@@ -1,0 +1,500 @@
+{% include 'uit-header.html' %}
+
+
+    <div id="vntbot">
+        <ui-help document="BotServicesManage" v-bind:actlang="activeLanguage"></ui-help>
+        <el-form ref="form" :model="managebotform" label-width="120px">
+            <el-form-item :label="flangp('Request subject')">
+                <el-input type="text" placeholder="subject" v-model="managebotform.subject"></el-input>
+            </el-form-item>
+            <el-form-item :label="flangp('Comment')">
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="for approver or performer"
+                    v-model="managebotform.comment">
+                </el-input>
+            </el-form-item>
+        <!--el-form ref="form" :model="managebotform" label-width="120px">
+
+            <el-row>
+            <el-form-item :label="flangp('Request subject')">
+                <el-input type="text" placeholder="subject" v-model="managebotform.subject"></el-input>
+            </el-form-item>
+            </el-row>
+            <el-row>
+            <el-form-item :label="flangp('Comment')">
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="for approver or performer"
+                    v-model="managebotform.comment">
+                </el-input>
+            </el-form-item>
+            </el-row-->
+            <el-form-item :label="flangp('Request Operation')">
+                <el-radio-group v-model="managebotform.operation">
+                    <el-radio label="add">{{flangp('BOT_ADD_SERVICE_ACTION_MESSAGE')}}</el-radio>
+                    <el-radio label="del">{{flangp('BOT_DEL_SERVICE_ACTION_MESSAGE')}}</el-radio>
+                </el-radio-group>
+            </el-form-item>
+
+            <span v-if="managebotform.operation == 'add'">
+                <el-form-item label="Existed user">
+                    <el-select v-model="managebotform.nickname" placeholder="Select">
+                        <el-option
+                            v-for="item in userList"
+                            :key="item.uservntid"
+                            :label="item.nickname"
+                            :value="item.nickname">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="New Service">
+                    <el-input placeholder="l1 code" v-model="managebotform.servicecode1" class="el-serv-code"></el-input>.
+                    <el-input placeholder="l2 code" v-model="managebotform.servicecode2" class="el-serv-code"></el-input>.
+                    <el-input placeholder="l3 code" v-model="managebotform.servicecode3" class="el-serv-code"></el-input>.
+                    <el-input placeholder="l4 code" v-model="managebotform.servicecode4" class="el-serv-code"></el-input>
+                </el-form-item>
+                <el-form-item label="Description">
+                    <el-input type="text" placeholder="description" v-model="managebotform.description"></el-input>
+                </el-form-item>
+
+                <!-- BEGIN of enable file upload -->
+                <el-form-item label="Files upload">
+                    <el-switch v-model="storage"></el-switch>
+                </el-form-item>
+                <!-- END of enable file upload -->
+
+                <!-- BEGIN of ACTIONS -->
+                <el-card class="box-card">
+                    <div slot="header" class="clearfix">
+                        <span>Actions</span>
+                    </div>
+                    <el-form-item label="Configured">
+                        <div v-for="i in svcActions">
+                            <input type="radio" v-model="svcActionsForm" name="svcActionsForm" :value="i"> Action:{{i.action}} Value:{{i.value}}  Description:{{i.description}}</input>
+                        </div>
+                    </el-form-item>
+                    <el-form-item label="Action Name">
+                        <el-input placeholder="name" v-model="svcActionsForm.action"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Action Value">
+                        <el-input placeholder="value" v-model="svcActionsForm.value"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Action Description">
+                        <el-input placeholder="description" v-model="svcActionsForm.description"></el-input>
+                    </el-form-item>
+                    <el-button type="primary" @click="svcActionsAdd(svcActionsForm.action, svcActionsForm.value, svcActionsForm.description)">add</el-button>
+                    <el-button type="primary" @click="svcActionsModify(svcActionsForm.id, svcActionsForm.action, svcActionsForm.value, svcActionsForm.description)">change</el-button>
+                    <el-button type="primary" @click="svcActionsDel(svcActionsForm.id)">remove</el-button>
+                </el-card>
+                <!-- END of ACTIONS -->
+
+                <!-- BEGIN of VARIABLES -->
+                <el-card class="box-card">
+                    <div slot="header" class="clearfix">
+                        <span>Variables</span>
+                    </div>
+                    <el-form-item label="Configured:">
+                        <div v-for="i in svcVars">
+                            <input type="radio" v-model="svcVarsForm" name="svcVarsForm" :value="i"> Name:{{i.name}} Type:{{i.type}}  Description:{{i.description}}</input>
+                        </div>
+                    </el-form-item>
+                    <el-form-item label="Var name">
+                        <el-input placeholder="name" v-model="svcVarsForm.name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Var type">
+                        <el-input placeholder="type" v-model="svcVarsForm.type"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Var description">
+                        <el-input placeholder="description" v-model="svcVarsForm.description"></el-input>
+                    </el-form-item>
+                    <el-button type="primary" @click="svcVarsAdd(svcVarsForm.name, svcVarsForm.type, svcVarsForm.description)">add</el-button>
+                    <el-button type="primary" @click="svcVarsModify(svcVarsForm.id, svcVarsForm.name, svcVarsForm.type, svcVarsForm.description)">change</el-button>
+                    <el-button type="primary" @click="svcVarsDel(svcVarsForm.id)">del</el-button>
+                </el-card>
+                <!-- END of VARIABLES -->
+
+                <!-- BEGIN of pre-services edit -->
+                <el-card class="box-card">
+                    <div slot="header" class="clearfix">
+                        <span>Pre-services</span>
+                    </div>
+                    <el-form-item label="Configured">
+                        <!-- editpresvcList -->
+                        User->
+                        <!--span v-for="i in editpresvcList"-->
+                        <span v-for="i in orderedPresvc">
+                            <input type="radio" v-model="editpresvcListForm" name="editpresvcListForm" :value="i">[Order:{{i.ordernum}} Svc:{{i.name}}]</input> ->
+                        </span>
+                        Service {{managebotform.servicecode1}}.{{managebotform.servicecode2}}.{{managebotform.servicecode3}}.{{managebotform.servicecode4}}
+                    </el-form-item>
+                    <el-form-item label="Order num">
+                        <el-input placeholder="number" v-model="editpresvcListForm.ordernum"></el-input>
+                    </el-form-item>
+                    <el-form-item label="Service">
+                        <el-select v-model="editpresvcListForm.presvcid" placeholder="Select">
+                            <el-option
+                                v-for="item in serviceList"
+                                :key="item.svcid"
+                                :label="item.level1+'.'+item.level2+'.'+item.level3+'.'+item.level4"
+                                :value="item.svcid">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-button type="primary" @click="editpresvcAdd(editpresvcListForm.ordernum, editpresvcListForm.presvcid)">add</el-button>
+                    <!--el-button type="primary" @click="editpresvcModify(editpresvcListForm.id, editpresvcListForm.ordernum, editpresvcListForm.presvcid)">Update entry</el-button-->
+                    <el-button type="primary" @click="editpresvcDel(editpresvcListForm.id)">del</el-button>
+                </el-card>
+                <!-- END of pre-services edit -->
+
+            </span>
+
+            <span v-if="managebotform.operation == 'del'">
+                <el-form-item label="Existed service">
+                    <el-select v-model="managebotform.serviceid" placeholder="Select">
+                        <el-option
+                            v-for="item in serviceList"
+                            :key="item.svcid"
+                            :label="item.level1+'.'+item.level2+'.'+item.level3+'.'+item.level4"
+                            :value="item.svcid">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+        </el-form>
+    </div>
+
+    <script type="text/javascript">
+        const { createApp } = Vue;
+        const vntbot = createApp({
+        //var vntbot = new Vue({
+            //el: '#vntbot',
+            name: "vntbotservices",
+            components: {
+                "ui-help": uiHelp,
+            },
+            data() {
+                return {
+                langp: null,
+                svcActions: [],
+                svcActionsForm: {
+                    id: 0,
+                    action: '',
+                    value: '',
+                    description: ''
+                },
+                svcVars: [],
+                svcVarsForm: {
+                    id: 0,
+                    name: '',
+                    type: '',
+                    description: ''
+                },
+                vntid: 0,
+                userList: [],
+                uservntid: 0,
+                jwt: '',
+                activeLanguage: 'eng',
+                svcid: null,
+                managebotform: {
+                    subject: '',
+                    vntid: null,
+                    uservntid: null,
+                    action: "Request",
+                    description: '',
+                    comment: '',
+                    operation: null,
+                    nickname: '',
+                    groupname: '',
+                    dst_svcid: null,
+                    servicecode1: '',
+                    servicecode2: '',
+                    servicecode3: '',
+                    servicecode4: '',
+                    serviceid: null,
+                    var1name: null,
+                    var2name: null,
+                    var3name: null,
+                    var4name: null,
+                    var5name: null,
+                    var6name: null,
+                    var7name: null,
+                    var8name: null,
+                    formid: 0,
+                    preservice1id: null,
+                    preservice2id: null,
+                    preservice3id: null,
+                    preservice4id: null,
+                    preservice5id: null,
+                    preservice6id: null
+                },
+                storage: false,
+                serviceList: [],
+                presvcList: [],
+                usrsvcList: [],
+                editpresvcList: [],
+                editpresvcListForm: {
+                    id: null,
+                    ordernum: null,
+                    presvcid: null,
+                    name: null
+                }
+                }
+            },
+            methods: {
+    flangp(s) {
+        if(this.langp) {
+          var index = 0;
+          for (index = 0; index < this.langp.length; ++index) {
+            if(this.langp[index].name == s) {
+              return this.langp[index].value;
+            }
+          }
+          return s;
+        }
+        return s;
+    },
+                // Services Actions
+                svcActionsDel(id) {
+                    this.svcActions = this.svcActions.filter(function(item) {
+                        return item.id !== id
+                    });
+                    this.svcActionsForm.id = 0;
+                    this.svcActionsForm.action = "";
+                    this.svcActionsForm.value = "";
+                    this.svcActionsForm.description = "";
+                },
+                svcActionsAdd(name, value, descr) {
+                    var ent = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        action: name,
+                        value: value,
+                        description: descr
+                    };
+                    this.svcActions.push(ent)
+                    this.svcActionsForm.id = 0;
+                    this.svcActionsForm.action = "";
+                    this.svcActionsForm.value = "";
+                    this.svcActionsForm.description = "";
+                },
+                svcActionsModify(id, name, value, descr) {
+                    objIndex = this.svcActions.findIndex((obj => obj.id == id));
+                    this.svcActions[objIndex].action = name;
+                    this.svcActions[objIndex].value = value;
+                    this.svcActions[objIndex].description = descr;
+                },
+                // Services Variables
+                svcVarsDel(id) {
+                    this.svcVars = this.svcVars.filter(function(item) {
+                        return item.id !== id
+                    });
+                    this.svcVarsForm.id = 0;
+                    this.svcVarsForm.name = "";
+                    this.svcVarsForm.type = "";
+                    this.svcVarsForm.description = "";
+                },
+                svcVarsAdd(name, type, descr) {
+                    var ent = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: name,
+                        type: type,
+                        description: descr
+                    };
+                    this.svcVars.push(ent)
+                    this.svcVarsForm.id = 0;
+                    this.svcVarsForm.name = "";
+                    this.svcVarsForm.type = "";
+                    this.svcVarsForm.description = "";
+                },
+                svcVarsModify(id, name, type, descr) {
+                    objIndex = this.svcVars.findIndex((obj => obj.id == id));
+                    this.svcVars[objIndex].name = name;
+                    this.svcVars[objIndex].type = type;
+                    this.svcVars[objIndex].description = descr;
+                },
+                // Pre-Services list
+                editpresvcDel(id) {
+                    this.editpresvcList = this.editpresvcList.filter(function(item) {
+                        return item.id !== id
+                    });
+                    this.editpresvcListForm.id = null;
+                    this.editpresvcListForm.ordernum = null;
+                    this.editpresvcListForm.presvcid = null;
+                    this.editpresvcListForm.name = null;
+                },
+                editpresvcAdd(ordernum, presvcid) {
+                    if (ordernum == 0 || presvcid == 0) {
+                        return;
+                    }
+                    if(!ordernum || !presvcid) {
+                        return;
+                    }
+                    // find same order
+                    var pobj = this.editpresvcList.filter(function(item) {
+                        return item.ordernum === ordernum
+                    });
+                    if(pobj.length > 0) {
+                        return; // the same ordernum
+                    }
+                    // find same service
+                    pobj = this.editpresvcList.filter(function(item) {
+                        return item.presvcid === presvcid
+                    });
+                    if(pobj.length > 0) {
+                        return; // the same service
+                    }
+                    // find name
+                    var svcobj = this.serviceList.filter(function(item) {
+                        return item.svcid === presvcid
+                    });
+                    var ent = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        ordernum: ordernum,
+                        presvcid: presvcid,
+                        name: svcobj[0].level1+'.'+svcobj[0].level2+'.'+svcobj[0].level3+'.'+svcobj[0].level4
+                    };
+                    this.editpresvcList.push(ent)
+                    this.editpresvcListForm.id = null;
+                    this.editpresvcListForm.ordernum = null;
+                    this.editpresvcListForm.presvcid = null;
+                    this.editpresvcListForm.name = null;
+                }//,
+                //editpresvcModify(id, ordernum, presvcid) {
+                //    objIndex = this.editpresvcList.findIndex((obj => obj.id == id));
+                //    var svcobj = this.serviceList.filter(function(item) {
+                //        return item.svcid === presvcid
+                //    });
+                //    this.editpresvcList[objIndex].ordernum = ordernum;
+                //    this.editpresvcList[objIndex].presvcid = presvcid;
+                //    this.editpresvcList[objIndex].name = svcobj[0].level1+'.'+svcobj[0].level2+'.'+svcobj[0].level3+'.'+svcobj[0].level4;
+                //    this.editpresvcListForm.id = null;
+                //    this.editpresvcListForm.ordernum = null;
+                //    this.editpresvcListForm.presvcid = null;
+                //    this.editpresvcListForm.name = null;
+                //}
+            },
+            computed: {
+                orderedPresvc: function () {
+                    return _.orderBy(this.editpresvcList, 'ordernum')
+                }
+            }
+        });
+        vntbot.use(ElementPlus);
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            vntbot.component(key, component);
+        }
+        vntbot.use(VueShowdownPlugin, {
+            flavor: "original",
+            options: {
+              emoji: true,
+            },
+          });
+        const botapp = vntbot.mount('#vntbot');
+        window.receiveDataFromParent = function(parentData) {
+            botapp.vntid = parentData.vntid;
+            botapp.uservntid = parentData.uservntid;
+            botapp.jwt = parentData.jwt;
+            botapp.svcid = parentData.svcid;
+            botapp.activeLanguage = parentData.activelanguage;
+            console.info("parentData=", parentData);
+            axios
+                .get(`/api/get/services?vntid=`+botapp.vntid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.serviceList = response.data.items));
+            axios
+                .get(`/api/get/preservices?vntid=`+botapp.vntid+'&svcid='+botapp.svcid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.presvcList = response.data.items));
+            axios
+                .get(`/api/get/fullpath?vntid=`+botapp.vntid+'&svcid='+botapp.svcid+'&uservntid='+botapp.uservntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.usrsvcList = response.data.items));
+            axios
+                .get(`/api/allusers?vntid=`+botapp.vntid, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then(response => (botapp.userList = response.data.items));
+            // load lang pack
+            axios
+                .get('/api/language', { headers: { Authorization: `JWT ${botapp.jwt}` } })
+                .then((response) => { botapp.langp = response.data.items; });
+        };
+        window.needToSubmitResults = function() {
+            console.log("call for needToSubmitResults");
+            botapp.managebotform.vntid = botapp.vntid;
+            botapp.managebotform.uservntid = botapp.uservntid;
+            botapp.managebotform.cur_uservntid = botapp.uservntid;
+            botapp.managebotform.dst_svcid = botapp.svcid;
+            /*
+            'formbody_json': [
+                { 'name': 'servicecode1', 'value': 'bill' },
+                { 'name': 'servicecode2', 'value': 'sign' },
+                { 'name': 'description', 'value': 'test service' },
+                { 'name': 'nickname', 'value': 'rom' },
+                { 'name': 'actions', 'value': 
+                    [
+                        { "action": "Sign", "value": "sign", "description": "need to sign bill" },
+                        { "action": "Check", "value": "check", "description": "need to check bill" }
+                    ]
+                },
+                { 'name': 'variables', 'value': 
+                    [
+                        { "name": "bill name", "type": "text", "description": "bill name" },
+                        { "name": "bill summ", "type": "number", "description": "bill sum" }
+                    ]
+                }
+            ]
+            */
+            /*
+            exp_actions = []
+            for (var i=0; i<vntbot.svcActions.length; i++) {
+                svca = vntbot.svcActions[i];
+                entry = {
+                    'action': svca['action'],
+                    'value': svca['value'],
+                    'description': svca['description']
+                };
+                exp_actions.push(entry)
+            }
+            exp_variables = [];
+            exp_preservices = [];
+            */
+            var actions = [];
+            for(var i=0; botapp.svcActions[i]; i++) {
+                var ent = {
+                    action: botapp.svcActions[i].action,
+                    value: botapp.svcActions[i].value,
+                    description: botapp.svcActions[i].description
+                };
+                actions[i] = ent;
+            }
+            var vars = [];
+            for(var i=0; botapp.svcVars[i]; i++) {
+                var ent = {
+                    name: botapp.svcVars[i].name,
+                    type: botapp.svcVars[i].type,
+                    description: botapp.svcVars[i].description
+                };
+                vars[i] = ent;
+            }
+            botapp.managebotform.formbody_json = [
+                { 'name': 'servicecode1', 'value': botapp.managebotform.servicecode1 },
+                { 'name': 'servicecode2', 'value': botapp.managebotform.servicecode2 },
+                { 'name': 'servicecode3', 'value': botapp.managebotform.servicecode3 },
+                { 'name': 'servicecode4', 'value': botapp.managebotform.servicecode4 },
+                { 'name': 'nickname', 'value': botapp.managebotform.nickname },
+                { 'name': 'description', 'value': botapp.managebotform.description },
+                { 'name': 'actions', 'value': actions },  // vntbot.svcActions
+                { 'name': 'variables', 'value': vars },   // vntbot.svcVars
+                { 'name': 'preservices', 'value': botapp.editpresvcList },
+                { 'name': 'serviceid', 'value': botapp.managebotform.serviceid },
+                { 'name': 'storage', 'value': botapp.storage }
+            ];
+            axios.post(`/api/post/newmessage`, botapp.managebotform, { headers: { Authorization: `JWT ${botapp.jwt}` } })
+            .then(function (response) {
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+        }
+    </script>
+
+{% include 'uit-footer.html' %}

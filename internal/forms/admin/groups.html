@@ -1,0 +1,168 @@
+{% include 'uit-header.html' %}
+
+<div id="vntbot">
+        activeLanguage={{activeLanguage}}
+        <ui-help document="BotGroupsManage" v-bind:actlang="activeLanguage"></ui-help>
+        <el-form ref="form" :model="managebotform" label-width="120px">
+            <el-form-item label="Request subject">
+                <el-input type="text" placeholder="subject" v-model="managebotform.subject"></el-input>
+            </el-form-item>
+            <el-form-item label="Comment">
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="for approver or performer"
+                    v-model="managebotform.comment">
+                </el-input>
+            </el-form-item>
+            <el-form-item label="Request Operation">
+                <el-radio-group v-model="managebotform.operation">
+                    <el-radio label="add">Add (need to fill new group name, description and first user)</el-radio>
+                    <el-radio label="del">Delete (need to select existed group name)</el-radio>
+                </el-radio-group>
+            </el-form-item>
+            <span v-if="managebotform.operation == 'del'">
+                <el-form-item label="Existed group">
+                    <el-select v-model="managebotform.groupidfordel" placeholder="Select">
+                        <el-option
+                            v-for="item in groupList"
+                            :key="item.groupid"
+                            :label="item.groupname"
+                            :value="item.groupid">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+            <span v-if="managebotform.operation == 'add'">
+                <el-form-item label="New group name">
+                    <el-input type="text" placeholder="groupname" v-model="managebotform.groupname"></el-input>
+                </el-form-item>
+                <el-form-item label="Description">
+                    <el-input type="text" placeholder="description" v-model="managebotform.description"></el-input>
+                </el-form-item>
+                <el-form-item label="Gateway user">
+                    <el-select v-model="managebotform.gwuser" placeholder="Select">
+                        <el-option
+                            v-for="item in userList"
+                            :key="item.uservntid"
+                            :label="item.nickname"
+                            :value="item.nickname">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </span>
+        </el-form>              
+</div>
+
+<script type="text/javascript">
+        const { createApp } = Vue;
+        const vntbot = createApp({
+            name: "vntbotgroups",
+            components: {
+                "ui-help": uiHelp,
+            },
+            data() {
+                return {
+                vntid: 0,
+                uservntid: 0,
+                jwt: '',
+                activeLanguage: 'eng',
+                svcid: null,
+                managebotform: {
+                    subject: '',
+                    vntid: 0,
+                    action: "Request",
+                    operation: null,
+                    nickname: '',
+                    groupname: '',
+                    groupidfordel: null,
+                    uservntid: null,
+                    gwuser: null,
+                    dst_svcid: null,
+                    comment: '',
+                    storage: '',
+                    formid: 0,
+                    formbody_json: '',
+                    description: ''
+                },
+                groupList: [],
+                userList: [],
+                presvcList: [],
+                usrsvcList: []
+                }
+            },
+        });
+        vntbot.use(ElementPlus);
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            vntbot.component(key, component);
+        }
+        vntbot.use(VueShowdownPlugin, {
+            flavor: "original",
+            options: {
+              emoji: true,
+            },
+          });
+        const groupsapp = vntbot.mount('#vntbot');
+        window.receiveDataFromParent = function(parentData) {
+            groupsapp.vntid = parentData.vntid;
+            groupsapp.uservntid = parentData.uservntid;
+            groupsapp.jwt = parentData.jwt;
+            groupsapp.svcid = parentData.svcid;
+            groupsapp.activeLanguage = parentData.activelanguage;
+            console.info("parentData=",parentData);
+            // now read list of groups
+            axios
+                .get(`/api/allgroups?vntid=`+groupsapp.vntid, { headers: { Authorization: `JWT ${groupsapp.jwt}` } })
+                .then(function (response) {
+                    //console.log("/api/allgroups=", response.data.items);
+                    groupsapp.groupList = response.data.items;
+                });
+            axios
+                .get(`/api/allusers?vntid=`+groupsapp.vntid, { headers: { Authorization: `JWT ${groupsapp.jwt}` } })
+                .then(function (response) {
+                    //console.log("/api/allusers=", response.data.items);
+                    groupsapp.userList = response.data.items;
+                });
+            axios
+                .get(`/api/get/preservices?vntid=`+groupsapp.vntid+'&svcid='+groupsapp.svcid, { headers: { Authorization: `JWT ${groupsapp.jwt}` } })
+                .then(function (response) {
+                    //console.log("/api/get/preservices=", response.data.items);
+                    groupsapp.presvcList = response.data.items;
+                });
+            axios
+                .get(`/api/get/fullpath?vntid=`+groupsapp.vntid+'&svcid='+groupsapp.svcid+'&uservntid='+groupsapp.uservntid, { headers: { Authorization: `JWT ${groupsapp.jwt}` } })
+                .then(function (response) {
+                    //console.log("/api/get/fullpath=", response.data.items);
+                    groupsapp.usrsvcList = response.data.items;
+                });
+        };
+        window.needToSubmitResults = function() {
+            console.log("call for needToSubmitResults");
+            groupsapp.managebotform.vntid = groupsapp.vntid;
+            groupsapp.managebotform.uservntid = groupsapp.uservntid;
+            groupsapp.managebotform.dst_svcid = groupsapp.svcid;
+            groupsapp.managebotform.formbody_json = [
+                { 'name': 'groupname', 'value': groupsapp.managebotform.groupname },
+                { 'name': 'group description', 'value': groupsapp.managebotform.description },
+                { 'name': 'gw user nickname', 'value': groupsapp.managebotform.gwuser },
+                { 'name': 'groupidfordel', 'value': groupsapp.managebotform.groupidfordel }
+            ]
+            axios.post(`/api/post/newmessage`, groupsapp.managebotform, { headers: { Authorization: `JWT ${groupsapp.jwt}` } })
+            .then(function (response) {
+                console.log("response=", response);
+                groupsapp.managebotform.subject = '';
+                groupsapp.managebotform.nickname = '';
+                groupsapp.managebotform.groupname = '';
+                groupsapp.managebotform.uservntid = null;
+                groupsapp.managebotform.groupidfordel = null;
+                groupsapp.managebotform.action = null;
+                groupsapp.managebotform.operation = null;
+                //rereadvnt();
+            })
+            .catch(function (error) {
+                console.log("error=", error);
+            });
+        }
+</script>
+
+{% include 'uit-footer.html' %}
